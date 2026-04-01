@@ -23,12 +23,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.typing import StateType
 
-from .coordinator import (
-    SMHIConfigEntry,
-    SMHIDataUpdateCoordinator,
-    SMHIFireDataUpdateCoordinator,
-)
-from .entity import SmhiFireEntity, SmhiWeatherEntity
+from .coordinator import SMHIConfigEntry, SMHIDataUpdateCoordinator
+from .entity import SmhiEntity
 
 PARALLEL_UPDATES = 0
 
@@ -58,16 +54,6 @@ FORESTDRY_MAP = {
 }
 
 
-def get_percentage_values(entity: SMHIWeatherSensor, key: str) -> int | None:
-    """Return percentage values in correct range."""
-    value: int | None = entity.coordinator.current.get(key)  # type: ignore[assignment]
-    if value is None:
-        return None
-    if isinstance(value, (int, float)) and 0 <= value <= 100:
-        return int(value)
-    return 0
-
-
 def _octas_to_pct(value: float | None) -> int | None:
     """Convert cloud cover from octas (0-8) to percentage."""
     if value is None:
@@ -82,79 +68,70 @@ def _frozen_precip(value: float | None) -> int | None:
     return round(value * 100)
 
 
-def get_fire_index_value(entity: SMHIFireSensor, key: str) -> str:
-    """Return index value as string."""
-    value: int | None = entity.coordinator.fire_current.get(key)  # type: ignore[assignment]
+def _fire_index(entity: SMHISensor, key: str) -> str:
+    """Return fire index value as string."""
+    value = entity.coordinator.fire_current.get(key)
     if value is not None and value > 0:
         return str(int(value))
     return "0"
 
 
 @dataclass(frozen=True, kw_only=True)
-class SMHIWeatherEntityDescription(SensorEntityDescription):
-    """Describes SMHI weather entity."""
+class SMHISensorDescription(SensorEntityDescription):
+    """Describes SMHI sensor entity."""
 
-    value_fn: Callable[[SMHIWeatherSensor], StateType | datetime]
-
-
-@dataclass(frozen=True, kw_only=True)
-class SMHIFireEntityDescription(SensorEntityDescription):
-    """Describes SMHI fire entity."""
-
-    value_fn: Callable[[SMHIFireSensor], StateType | datetime]
+    value_fn: Callable[[SMHISensor], StateType | datetime]
 
 
-WEATHER_SENSOR_DESCRIPTIONS: tuple[SMHIWeatherEntityDescription, ...] = (
-    SMHIWeatherEntityDescription(
+WEATHER_SENSOR_DESCRIPTIONS: tuple[SMHISensorDescription, ...] = (
+    SMHISensorDescription(
         key="thunder",
         translation_key="thunder",
-        value_fn=lambda entity: get_percentage_values(
-            entity, "thunderstorm_probability"
-        ),
+        value_fn=lambda e: e.coordinator.current.get("thunderstorm_probability"),
         native_unit_of_measurement=PERCENTAGE,
     ),
-    SMHIWeatherEntityDescription(
+    SMHISensorDescription(
         key="total_cloud",
         translation_key="total_cloud",
-        value_fn=lambda entity: _octas_to_pct(
-            entity.coordinator.current.get("cloud_area_fraction")
+        value_fn=lambda e: _octas_to_pct(
+            e.coordinator.current.get("cloud_area_fraction")
         ),
         native_unit_of_measurement=PERCENTAGE,
         entity_registry_enabled_default=False,
     ),
-    SMHIWeatherEntityDescription(
+    SMHISensorDescription(
         key="low_cloud",
         translation_key="low_cloud",
-        value_fn=lambda entity: _octas_to_pct(
-            entity.coordinator.current.get("low_type_cloud_area_fraction")
+        value_fn=lambda e: _octas_to_pct(
+            e.coordinator.current.get("low_type_cloud_area_fraction")
         ),
         native_unit_of_measurement=PERCENTAGE,
         entity_registry_enabled_default=False,
     ),
-    SMHIWeatherEntityDescription(
+    SMHISensorDescription(
         key="medium_cloud",
         translation_key="medium_cloud",
-        value_fn=lambda entity: _octas_to_pct(
-            entity.coordinator.current.get("medium_type_cloud_area_fraction")
+        value_fn=lambda e: _octas_to_pct(
+            e.coordinator.current.get("medium_type_cloud_area_fraction")
         ),
         native_unit_of_measurement=PERCENTAGE,
         entity_registry_enabled_default=False,
     ),
-    SMHIWeatherEntityDescription(
+    SMHISensorDescription(
         key="high_cloud",
         translation_key="high_cloud",
-        value_fn=lambda entity: _octas_to_pct(
-            entity.coordinator.current.get("high_type_cloud_area_fraction")
+        value_fn=lambda e: _octas_to_pct(
+            e.coordinator.current.get("high_type_cloud_area_fraction")
         ),
         native_unit_of_measurement=PERCENTAGE,
         entity_registry_enabled_default=False,
     ),
-    SMHIWeatherEntityDescription(
+    SMHISensorDescription(
         key="precipitation_category",
         translation_key="precipitation_category",
-        value_fn=lambda entity: str(
+        value_fn=lambda e: str(
             int(
-                entity.coordinator.current.get(
+                e.coordinator.current.get(
                     "predominant_precipitation_type_at_surface", 0
                 )
             )
@@ -162,97 +139,90 @@ WEATHER_SENSOR_DESCRIPTIONS: tuple[SMHIWeatherEntityDescription, ...] = (
         device_class=SensorDeviceClass.ENUM,
         options=["0", "1", "2", "3", "4", "5", "6"],
     ),
-    SMHIWeatherEntityDescription(
+    SMHISensorDescription(
         key="frozen_precipitation",
         translation_key="frozen_precipitation",
-        value_fn=lambda entity: _frozen_precip(
-            entity.coordinator.current.get("precipitation_frozen_part")
+        value_fn=lambda e: _frozen_precip(
+            e.coordinator.current.get("precipitation_frozen_part")
         ),
         native_unit_of_measurement=PERCENTAGE,
     ),
 )
-FIRE_SENSOR_DESCRIPTIONS: tuple[SMHIFireEntityDescription, ...] = (
-    SMHIFireEntityDescription(
+
+FIRE_SENSOR_DESCRIPTIONS: tuple[SMHISensorDescription, ...] = (
+    SMHISensorDescription(
         key="fwiindex",
         translation_key="fwiindex",
-        value_fn=(
-            lambda entity: FWI_INDEX_MAP.get(get_fire_index_value(entity, "fwiindex"))
-        ),
+        value_fn=lambda e: FWI_INDEX_MAP.get(_fire_index(e, "fwiindex")),
         device_class=SensorDeviceClass.ENUM,
         options=[*FWI_INDEX_MAP.values()],
         entity_registry_enabled_default=False,
     ),
-    SMHIFireEntityDescription(
+    SMHISensorDescription(
         key="fire_weather_index",
         translation_key="fire_weather_index",
-        value_fn=lambda entity: entity.coordinator.fire_current.get("fwi"),
+        value_fn=lambda e: e.coordinator.fire_current.get("fwi"),
         state_class=SensorStateClass.MEASUREMENT,
         entity_registry_enabled_default=False,
     ),
-    SMHIFireEntityDescription(
+    SMHISensorDescription(
         key="initial_spread_index",
         translation_key="initial_spread_index",
-        value_fn=lambda entity: entity.coordinator.fire_current.get("isi"),
+        value_fn=lambda e: e.coordinator.fire_current.get("isi"),
         state_class=SensorStateClass.MEASUREMENT,
         entity_registry_enabled_default=False,
     ),
-    SMHIFireEntityDescription(
+    SMHISensorDescription(
         key="build_up_index",
         translation_key="build_up_index",
-        value_fn=(
-            lambda entity: entity.coordinator.fire_current.get(
-                "bui"  # codespell:ignore bui
-            )
+        value_fn=lambda e: e.coordinator.fire_current.get(
+            "bui"  # codespell:ignore bui
         ),
         state_class=SensorStateClass.MEASUREMENT,
         entity_registry_enabled_default=False,
     ),
-    SMHIFireEntityDescription(
+    SMHISensorDescription(
         key="fine_fuel_moisture_code",
         translation_key="fine_fuel_moisture_code",
-        value_fn=lambda entity: entity.coordinator.fire_current.get("ffmc"),
+        value_fn=lambda e: e.coordinator.fire_current.get("ffmc"),
         state_class=SensorStateClass.MEASUREMENT,
         entity_registry_enabled_default=False,
     ),
-    SMHIFireEntityDescription(
+    SMHISensorDescription(
         key="duff_moisture_code",
         translation_key="duff_moisture_code",
-        value_fn=lambda entity: entity.coordinator.fire_current.get("dmc"),
+        value_fn=lambda e: e.coordinator.fire_current.get("dmc"),
         state_class=SensorStateClass.MEASUREMENT,
         entity_registry_enabled_default=False,
     ),
-    SMHIFireEntityDescription(
+    SMHISensorDescription(
         key="drought_code",
         translation_key="drought_code",
-        value_fn=lambda entity: entity.coordinator.fire_current.get("dc"),
+        value_fn=lambda e: e.coordinator.fire_current.get("dc"),
         state_class=SensorStateClass.MEASUREMENT,
         entity_registry_enabled_default=False,
     ),
-    SMHIFireEntityDescription(
+    SMHISensorDescription(
         key="grassfire",
         translation_key="grassfire",
-        value_fn=(
-            lambda entity: GRASSFIRE_MAP.get(get_fire_index_value(entity, "grassfire"))
-        ),
+        value_fn=lambda e: GRASSFIRE_MAP.get(_fire_index(e, "grassfire")),
         device_class=SensorDeviceClass.ENUM,
         options=[*GRASSFIRE_MAP.values()],
         entity_registry_enabled_default=False,
     ),
-    SMHIFireEntityDescription(
+    SMHISensorDescription(
         key="rate_of_spread",
         translation_key="rate_of_spread",
-        value_fn=lambda entity: entity.coordinator.fire_current.get("rn"),
+        value_fn=lambda e: e.coordinator.fire_current.get("rn"),
         device_class=SensorDeviceClass.SPEED,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfSpeed.METERS_PER_MINUTE,
         entity_registry_enabled_default=False,
     ),
-    SMHIFireEntityDescription(
+    SMHISensorDescription(
         key="forestdry",
         translation_key="forestdry",
-        value_fn=(
-            lambda entity: FORESTDRY_MAP.get(get_fire_index_value(entity, "forestdry"))
-        ),
+        value_fn=lambda e: FORESTDRY_MAP.get(_fire_index(e, "forestdry")),
         device_class=SensorDeviceClass.ENUM,
         options=[*FORESTDRY_MAP.values()],
         entity_registry_enabled_default=False,
@@ -266,86 +236,37 @@ async def async_setup_entry(
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up SMHI sensor platform."""
-
-    coordinator = entry.runtime_data[0]
-    fire_coordinator = entry.runtime_data[1]
+    coordinator = entry.runtime_data
     location = entry.data
-    entities: list[SMHIWeatherSensor | SMHIFireSensor] = []
-    entities.extend(
-        SMHIWeatherSensor(
-            location[CONF_LOCATION][CONF_LATITUDE],
-            location[CONF_LOCATION][CONF_LONGITUDE],
-            coordinator=coordinator,
-            entity_description=description,
-        )
-        for description in WEATHER_SENSOR_DESCRIPTIONS
-    )
-    entities.extend(
-        SMHIFireSensor(
-            location[CONF_LOCATION][CONF_LATITUDE],
-            location[CONF_LOCATION][CONF_LONGITUDE],
-            coordinator=fire_coordinator,
-            entity_description=description,
-        )
-        for description in FIRE_SENSOR_DESCRIPTIONS
-    )
+    lat = location[CONF_LOCATION][CONF_LATITUDE]
+    lon = location[CONF_LOCATION][CONF_LONGITUDE]
 
+    entities: list[SMHISensor] = [
+        SMHISensor(lat, lon, coordinator=coordinator, entity_description=desc)
+        for desc in (*WEATHER_SENSOR_DESCRIPTIONS, *FIRE_SENSOR_DESCRIPTIONS)
+    ]
     async_add_entities(entities)
 
 
-class SMHIWeatherSensor(SmhiWeatherEntity, SensorEntity):
-    """Representation of a SMHI Weather Sensor."""
+class SMHISensor(SmhiEntity, SensorEntity):
+    """Representation of a SMHI Sensor."""
 
-    entity_description: SMHIWeatherEntityDescription
+    entity_description: SMHISensorDescription
 
     def __init__(
         self,
         latitude: str,
         longitude: str,
         coordinator: SMHIDataUpdateCoordinator,
-        entity_description: SMHIWeatherEntityDescription,
+        entity_description: SMHISensorDescription,
     ) -> None:
         """Initiate SMHI Sensor."""
         self.entity_description = entity_description
-        super().__init__(
-            latitude,
-            longitude,
-            coordinator,
-        )
+        super().__init__(latitude, longitude, coordinator)
         lat = round(float(latitude), 6)
         lon = round(float(longitude), 6)
         self._attr_unique_id = f"{lat}, {lon}-{entity_description.key}"
 
     def update_entity_data(self) -> None:
         """Refresh the entity data."""
-        if self.coordinator.data.daily:
-            self._attr_native_value = self.entity_description.value_fn(self)
-
-
-class SMHIFireSensor(SmhiFireEntity, SensorEntity):
-    """Representation of a SMHI Weather Sensor."""
-
-    entity_description: SMHIFireEntityDescription
-
-    def __init__(
-        self,
-        latitude: str,
-        longitude: str,
-        coordinator: SMHIFireDataUpdateCoordinator,
-        entity_description: SMHIFireEntityDescription,
-    ) -> None:
-        """Initiate SMHI Sensor."""
-        self.entity_description = entity_description
-        super().__init__(
-            latitude,
-            longitude,
-            coordinator,
-        )
-        lat = round(float(latitude), 6)
-        lon = round(float(longitude), 6)
-        self._attr_unique_id = f"{lat}, {lon}-{entity_description.key}"
-
-    def update_entity_data(self) -> None:
-        """Refresh the entity data."""
-        if self.coordinator.data.fire_daily:
-            self._attr_native_value = self.entity_description.value_fn(self)
+        self._attr_native_value = self.entity_description.value_fn(self)

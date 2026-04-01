@@ -24,7 +24,6 @@ from homeassistant.components.weather import (
     ATTR_FORECAST_CLOUD_COVERAGE,
     ATTR_FORECAST_CONDITION,
     ATTR_FORECAST_HUMIDITY,
-    ATTR_FORECAST_IS_DAYTIME,
     ATTR_FORECAST_NATIVE_PRECIPITATION,
     ATTR_FORECAST_NATIVE_PRESSURE,
     ATTR_FORECAST_NATIVE_TEMP,
@@ -54,7 +53,7 @@ from homeassistant.util import slugify
 
 from .const import ATTR_SMHI_THUNDER_PROBABILITY, ENTITY_ID_SENSOR_FORMAT
 from .coordinator import SMHIConfigEntry
-from .entity import SmhiWeatherEntity
+from .entity import SmhiEntity
 
 # Used to map condition from API results
 CONDITION_CLASSES: Final[dict[str, list[int]]] = {
@@ -88,7 +87,7 @@ async def async_setup_entry(
     """Add a weather entity from map location."""
     location = config_entry.data
 
-    coordinator = config_entry.runtime_data[0]
+    coordinator = config_entry.runtime_data
 
     entity = SmhiWeather(
         location[CONF_LOCATION][CONF_LATITUDE],
@@ -100,7 +99,7 @@ async def async_setup_entry(
     async_add_entities([entity])
 
 
-class SmhiWeather(SmhiWeatherEntity, SingleCoordinatorWeatherEntity):
+class SmhiWeather(SmhiEntity, SingleCoordinatorWeatherEntity):
     """Representation of a weather entity."""
 
     _attr_native_temperature_unit = UnitOfTemperature.CELSIUS
@@ -116,7 +115,7 @@ class SmhiWeather(SmhiWeatherEntity, SingleCoordinatorWeatherEntity):
 
     def update_entity_data(self) -> None:
         """Refresh the entity data."""
-        if daily_data := self.coordinator.data.daily:
+        if daily_data := self.coordinator.data.weather.daily:
             d = daily_data[0]
             self._attr_native_temperature = d.get("air_temperature")
             self._attr_humidity = d.get("relative_humidity")
@@ -138,9 +137,9 @@ class SmhiWeather(SmhiWeatherEntity, SingleCoordinatorWeatherEntity):
     @property
     def extra_state_attributes(self) -> Mapping[str, Any] | None:
         """Return additional attributes."""
-        if daily_data := self.coordinator.data.daily:
+        if hourly := self.coordinator.data.weather.hourly:
             return {
-                ATTR_SMHI_THUNDER_PROBABILITY: daily_data[0].get(
+                ATTR_SMHI_THUNDER_PROBABILITY: hourly[0].get(
                     "thunderstorm_probability"
                 ),
             }
@@ -153,7 +152,7 @@ class SmhiWeather(SmhiWeatherEntity, SingleCoordinatorWeatherEntity):
         super()._handle_coordinator_update()
 
     def _get_forecast_data(
-        self, forecast_data: list[dict] | None, forecast_type: str
+        self, forecast_data: list[dict] | None
     ) -> list[Forecast] | None:
         """Get forecast data."""
         if forecast_data is None or len(forecast_data) < 3:
@@ -194,19 +193,14 @@ class SmhiWeather(SmhiWeatherEntity, SingleCoordinatorWeatherEntity):
                     ATTR_FORECAST_CLOUD_COVERAGE: cloud_pct,
                 }
             )
-            if forecast_type == "twice_daily":
-                new_forecast[ATTR_FORECAST_IS_DAYTIME] = False
-                if forecast["valid_time"].hour == 12:
-                    new_forecast[ATTR_FORECAST_IS_DAYTIME] = True
-
             data.append(new_forecast)
 
         return data
 
     def _async_forecast_daily(self) -> list[Forecast] | None:
         """Service to retrieve the daily forecast."""
-        return self._get_forecast_data(self.coordinator.data.daily, "daily")
+        return self._get_forecast_data(self.coordinator.data.weather.daily)
 
     def _async_forecast_hourly(self) -> list[Forecast] | None:
         """Service to retrieve the hourly forecast."""
-        return self._get_forecast_data(self.coordinator.data.hourly, "hourly")
+        return self._get_forecast_data(self.coordinator.data.weather.hourly)

@@ -10,7 +10,7 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
-from .coordinator import SMHIDataUpdateCoordinator, SMHIFireDataUpdateCoordinator
+from .coordinator import SMHIDataUpdateCoordinator
 
 
 class SmhiWeatherBaseEntity(Entity):
@@ -42,10 +42,10 @@ class SmhiWeatherBaseEntity(Entity):
         """Refresh the entity data."""
 
 
-class SmhiWeatherEntity(
+class SmhiEntity(
     CoordinatorEntity[SMHIDataUpdateCoordinator], SmhiWeatherBaseEntity
 ):
-    """Representation of a weather entity."""
+    """Representation of an entity using the single SMHI coordinator."""
 
     def __init__(
         self,
@@ -53,29 +53,7 @@ class SmhiWeatherEntity(
         longitude: str,
         coordinator: SMHIDataUpdateCoordinator,
     ) -> None:
-        """Initialize the SMHI base weather entity."""
-        super().__init__(coordinator)
-        SmhiWeatherBaseEntity.__init__(self, latitude, longitude)
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator."""
-        self.update_entity_data()
-        super()._handle_coordinator_update()
-
-
-class SmhiFireEntity(
-    CoordinatorEntity[SMHIFireDataUpdateCoordinator], SmhiWeatherBaseEntity
-):
-    """Representation of a weather entity."""
-
-    def __init__(
-        self,
-        latitude: str,
-        longitude: str,
-        coordinator: SMHIFireDataUpdateCoordinator,
-    ) -> None:
-        """Initialize the SMHI base weather entity."""
+        """Initialize the SMHI entity."""
         super().__init__(coordinator)
         SmhiWeatherBaseEntity.__init__(self, latitude, longitude)
 
