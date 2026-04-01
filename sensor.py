@@ -61,11 +61,25 @@ FORESTDRY_MAP = {
 def get_percentage_values(entity: SMHIWeatherSensor, key: str) -> int | None:
     """Return percentage values in correct range."""
     value: int | None = entity.coordinator.current.get(key)  # type: ignore[assignment]
-    if value is not None and 0 <= value <= 100:
-        return value
-    if value is not None:
-        return 0
-    return None
+    if value is None:
+        return None
+    if isinstance(value, (int, float)) and 0 <= value <= 100:
+        return int(value)
+    return 0
+
+
+def _octas_to_pct(value: float | None) -> int | None:
+    """Convert cloud cover from octas (0-8) to percentage."""
+    if value is None:
+        return None
+    return round(value * 100 / 8)
+
+
+def _frozen_precip(value: float | None) -> int | None:
+    """Convert frozen precipitation fraction to percentage."""
+    if value is None or value < 0:
+        return None
+    return round(value * 100)
 
 
 def get_fire_index_value(entity: SMHIFireSensor, key: str) -> str:
@@ -94,34 +108,44 @@ WEATHER_SENSOR_DESCRIPTIONS: tuple[SMHIWeatherEntityDescription, ...] = (
     SMHIWeatherEntityDescription(
         key="thunder",
         translation_key="thunder",
-        value_fn=lambda entity: get_percentage_values(entity, "thunder"),
+        value_fn=lambda entity: get_percentage_values(
+            entity, "thunderstorm_probability"
+        ),
         native_unit_of_measurement=PERCENTAGE,
     ),
     SMHIWeatherEntityDescription(
         key="total_cloud",
         translation_key="total_cloud",
-        value_fn=lambda entity: get_percentage_values(entity, "total_cloud"),
+        value_fn=lambda entity: _octas_to_pct(
+            entity.coordinator.current.get("cloud_area_fraction")
+        ),
         native_unit_of_measurement=PERCENTAGE,
         entity_registry_enabled_default=False,
     ),
     SMHIWeatherEntityDescription(
         key="low_cloud",
         translation_key="low_cloud",
-        value_fn=lambda entity: get_percentage_values(entity, "low_cloud"),
+        value_fn=lambda entity: _octas_to_pct(
+            entity.coordinator.current.get("low_type_cloud_area_fraction")
+        ),
         native_unit_of_measurement=PERCENTAGE,
         entity_registry_enabled_default=False,
     ),
     SMHIWeatherEntityDescription(
         key="medium_cloud",
         translation_key="medium_cloud",
-        value_fn=lambda entity: get_percentage_values(entity, "medium_cloud"),
+        value_fn=lambda entity: _octas_to_pct(
+            entity.coordinator.current.get("medium_type_cloud_area_fraction")
+        ),
         native_unit_of_measurement=PERCENTAGE,
         entity_registry_enabled_default=False,
     ),
     SMHIWeatherEntityDescription(
         key="high_cloud",
         translation_key="high_cloud",
-        value_fn=lambda entity: get_percentage_values(entity, "high_cloud"),
+        value_fn=lambda entity: _octas_to_pct(
+            entity.coordinator.current.get("high_type_cloud_area_fraction")
+        ),
         native_unit_of_measurement=PERCENTAGE,
         entity_registry_enabled_default=False,
     ),
@@ -129,7 +153,11 @@ WEATHER_SENSOR_DESCRIPTIONS: tuple[SMHIWeatherEntityDescription, ...] = (
         key="precipitation_category",
         translation_key="precipitation_category",
         value_fn=lambda entity: str(
-            get_percentage_values(entity, "precipitation_category")
+            int(
+                entity.coordinator.current.get(
+                    "predominant_precipitation_type_at_surface", 0
+                )
+            )
         ),
         device_class=SensorDeviceClass.ENUM,
         options=["0", "1", "2", "3", "4", "5", "6"],
@@ -137,7 +165,9 @@ WEATHER_SENSOR_DESCRIPTIONS: tuple[SMHIWeatherEntityDescription, ...] = (
     SMHIWeatherEntityDescription(
         key="frozen_precipitation",
         translation_key="frozen_precipitation",
-        value_fn=lambda entity: get_percentage_values(entity, "frozen_precipitation"),
+        value_fn=lambda entity: _frozen_precip(
+            entity.coordinator.current.get("precipitation_frozen_part")
+        ),
         native_unit_of_measurement=PERCENTAGE,
     ),
 )

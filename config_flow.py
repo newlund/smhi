@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pysmhi import SmhiForecastException, SMHIPointForecast
+import aiohttp
 import voluptuous as vol
 
 from homeassistant.components.weather import DOMAIN as WEATHER_DOMAIN
@@ -19,6 +19,7 @@ from homeassistant.helpers import (
 from homeassistant.helpers.selector import LocationSelector
 
 from .const import DEFAULT_NAME, DOMAIN, HOME_LOCATION_NAME
+from .coordinator import WEATHER_BASE_URL
 
 
 async def async_check_location(
@@ -26,13 +27,12 @@ async def async_check_location(
 ) -> bool:
     """Return true if location is ok."""
     session = aiohttp_client.async_get_clientsession(hass)
-    smhi_api = SMHIPointForecast(str(longitude), str(latitude), session=session)
+    url = f"{WEATHER_BASE_URL}/geotype/point/lon/{longitude}/lat/{latitude}/data.json"
     try:
-        await smhi_api.async_get_daily_forecast()
-    except SmhiForecastException:
+        async with session.get(url) as resp:
+            return resp.status == 200
+    except aiohttp.ClientError:
         return False
-
-    return True
 
 
 class SmhiFlowHandler(ConfigFlow, domain=DOMAIN):

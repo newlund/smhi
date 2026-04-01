@@ -4,15 +4,9 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
+from datetime import datetime
 
-from pysmhi import (
-    SMHIFireForecast,
-    SmhiFireForecastException,
-    SMHIFirePointForecast,
-    SMHIForecast,
-    SmhiForecastException,
-    SMHIPointForecast,
-)
+import aiohttp
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_LATITUDE, CONF_LOCATION, CONF_LONGITUDE
@@ -26,6 +20,49 @@ type SMHIConfigEntry = ConfigEntry[
     tuple[SMHIDataUpdateCoordinator, SMHIFireDataUpdateCoordinator]
 ]
 
+WEATHER_BASE_URL = (
+    "https://opendata-download-metfcst.smhi.se/api/category/snow1g/version/1"
+)
+FIRE_BASE_URL = (
+    "https://opendata-download-metfcst.smhi.se/api/category/fwif1g/version/1"
+)
+
+SMHIForecast = dict
+SMHIFireForecast = dict
+
+
+def _parse_weather_timeseries(data: dict) -> list[SMHIForecast]:
+    """Parse weather API response into forecast list."""
+    forecasts: list[SMHIForecast] = []
+    for ts in data.get("timeSeries", []):
+        entry = dict(ts.get("data", {}))
+        entry["valid_time"] = datetime.fromisoformat(ts["time"])
+        if start := ts.get("intervalParametersStartTime"):
+            entry["interval_start"] = datetime.fromisoformat(start)
+        forecasts.append(entry)
+    return forecasts
+
+
+def _parse_fire_timeseries(data: dict) -> list[SMHIFireForecast]:
+    """Parse fire API response into forecast list."""
+    forecasts: list[SMHIFireForecast] = []
+    for ts in data.get("timeSeries", []):
+        entry: SMHIFireForecast = {
+            "valid_time": datetime.fromisoformat(ts["validTime"]),
+        }
+        for param in ts.get("parameters", []):
+            entry[param["name"]] = param["values"][0]
+        forecasts.append(entry)
+    return forecasts
+
+
+async def _fetch_json(session: aiohttp.ClientSession, url: str) -> dict:
+    """Fetch JSON from URL."""
+    async with session.get(url) as resp:
+        if resp.status != 200:
+            raise UpdateFailed(f"SMHI API returned {resp.status} for {url}")
+        return await resp.json()
+
 
 @dataclass
 class SMHIForecastData:
@@ -33,7 +70,6 @@ class SMHIForecastData:
 
     daily: list[SMHIForecast]
     hourly: list[SMHIForecast]
-    twice_daily: list[SMHIForecast]
 
 
 @dataclass
@@ -58,31 +94,25 @@ class SMHIDataUpdateCoordinator(DataUpdateCoordinator[SMHIForecastData]):
             name=DOMAIN,
             update_interval=DEFAULT_SCAN_INTERVAL,
         )
-        self._smhi_api = SMHIPointForecast(
-            config_entry.data[CONF_LOCATION][CONF_LONGITUDE],
-            config_entry.data[CONF_LOCATION][CONF_LATITUDE],
-            session=aiohttp_client.async_get_clientsession(hass),
+        lon = config_entry.data[CONF_LOCATION][CONF_LONGITUDE]
+        lat = config_entry.data[CONF_LOCATION][CONF_LATITUDE]
+        self._url = (
+            f"{WEATHER_BASE_URL}/geotype/point/lon/{lon}/lat/{lat}/data.json"
         )
+        self._session = aiohttp_client.async_get_clientsession(hass)
 
     async def _async_update_data(self) -> SMHIForecastData:
         """Fetch data from SMHI."""
         try:
             async with asyncio.timeout(TIMEOUT):
-                _forecast_daily = await self._smhi_api.async_get_daily_forecast()
-                _forecast_hourly = await self._smhi_api.async_get_hourly_forecast()
-                _forecast_twice_daily = (
-                    await self._smhi_api.async_get_twice_daily_forecast()
-                )
-        except SmhiForecastException as ex:
+                data = await _fetch_json(self._session, self._url)
+        except (aiohttp.ClientError, TimeoutError) as ex:
             raise UpdateFailed(
                 "Failed to retrieve the forecast from the SMHI API"
             ) from ex
 
-        return SMHIForecastData(
-            daily=_forecast_daily,
-            hourly=_forecast_hourly,
-            twice_daily=_forecast_twice_daily,
-        )
+        forecasts = _parse_weather_timeseries(data)
+        return SMHIForecastData(daily=forecasts, hourly=forecasts)
 
     @property
     def current(self) -> SMHIForecast:
@@ -104,30 +134,29 @@ class SMHIFireDataUpdateCoordinator(DataUpdateCoordinator[SMHIFireForecastData])
             name=DOMAIN,
             update_interval=DEFAULT_SCAN_INTERVAL,
         )
-        self._smhi_fire_api = SMHIFirePointForecast(
-            config_entry.data[CONF_LOCATION][CONF_LONGITUDE],
-            config_entry.data[CONF_LOCATION][CONF_LATITUDE],
-            session=aiohttp_client.async_get_clientsession(hass),
-        )
+        lon = config_entry.data[CONF_LOCATION][CONF_LONGITUDE]
+        lat = config_entry.data[CONF_LOCATION][CONF_LATITUDE]
+        base = f"{FIRE_BASE_URL}/{{freq}}/geotype/point/lon/{lon}/lat/{lat}/data.json"
+        self._daily_url = base.format(freq="daily")
+        self._hourly_url = base.format(freq="hourly")
+        self._session = aiohttp_client.async_get_clientsession(hass)
 
     async def _async_update_data(self) -> SMHIFireForecastData:
         """Fetch data from SMHI."""
         try:
             async with asyncio.timeout(TIMEOUT):
-                _forecast_fire_daily = (
-                    await self._smhi_fire_api.async_get_daily_forecast()
+                daily_data, hourly_data = await asyncio.gather(
+                    _fetch_json(self._session, self._daily_url),
+                    _fetch_json(self._session, self._hourly_url),
                 )
-                _forecast_fire_hourly = (
-                    await self._smhi_fire_api.async_get_hourly_forecast()
-                )
-        except SmhiFireForecastException as ex:
+        except (aiohttp.ClientError, TimeoutError) as ex:
             raise UpdateFailed(
                 "Failed to retrieve the forecast from the SMHI API"
             ) from ex
 
         return SMHIFireForecastData(
-            fire_daily=_forecast_fire_daily,
-            fire_hourly=_forecast_fire_hourly,
+            fire_daily=_parse_fire_timeseries(daily_data),
+            fire_hourly=_parse_fire_timeseries(hourly_data),
         )
 
     @property

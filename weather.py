@@ -5,8 +5,6 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any, Final
 
-from pysmhi import SMHIForecast
-
 from homeassistant.components.weather import (
     ATTR_CONDITION_CLEAR_NIGHT,
     ATTR_CONDITION_CLOUDY,
@@ -113,22 +111,25 @@ class SmhiWeather(SmhiWeatherEntity, SingleCoordinatorWeatherEntity):
     _attr_supported_features = (
         WeatherEntityFeature.FORECAST_DAILY
         | WeatherEntityFeature.FORECAST_HOURLY
-        | WeatherEntityFeature.FORECAST_TWICE_DAILY
     )
     _attr_name = None
 
     def update_entity_data(self) -> None:
         """Refresh the entity data."""
         if daily_data := self.coordinator.data.daily:
-            self._attr_native_temperature = daily_data[0]["temperature"]
-            self._attr_humidity = daily_data[0]["humidity"]
-            self._attr_native_wind_speed = daily_data[0]["wind_speed"]
-            self._attr_wind_bearing = daily_data[0]["wind_direction"]
-            self._attr_native_visibility = daily_data[0]["visibility"]
-            self._attr_native_pressure = daily_data[0]["pressure"]
-            self._attr_native_wind_gust_speed = daily_data[0]["wind_gust"]
-            self._attr_cloud_coverage = daily_data[0]["total_cloud"]
-            self._attr_condition = CONDITION_MAP.get(daily_data[0]["symbol"])
+            d = daily_data[0]
+            self._attr_native_temperature = d.get("air_temperature")
+            self._attr_humidity = d.get("relative_humidity")
+            self._attr_native_wind_speed = d.get("wind_speed")
+            self._attr_wind_bearing = d.get("wind_from_direction")
+            self._attr_native_visibility = d.get("visibility_in_air")
+            self._attr_native_pressure = d.get("air_pressure_at_mean_sea_level")
+            self._attr_native_wind_gust_speed = d.get("wind_speed_of_gust")
+            cloud_octas = d.get("cloud_area_fraction")
+            self._attr_cloud_coverage = (
+                round(cloud_octas * 100 / 8) if cloud_octas is not None else None
+            )
+            self._attr_condition = CONDITION_MAP.get(d.get("symbol_code"))
             if self._attr_condition == ATTR_CONDITION_SUNNY and not sun.is_up(
                 self.coordinator.hass
             ):
@@ -139,7 +140,9 @@ class SmhiWeather(SmhiWeatherEntity, SingleCoordinatorWeatherEntity):
         """Return additional attributes."""
         if daily_data := self.coordinator.data.daily:
             return {
-                ATTR_SMHI_THUNDER_PROBABILITY: daily_data[0]["thunder"],
+                ATTR_SMHI_THUNDER_PROBABILITY: daily_data[0].get(
+                    "thunderstorm_probability"
+                ),
             }
         return None
 
@@ -150,7 +153,7 @@ class SmhiWeather(SmhiWeatherEntity, SingleCoordinatorWeatherEntity):
         super()._handle_coordinator_update()
 
     def _get_forecast_data(
-        self, forecast_data: list[SMHIForecast] | None, forecast_type: str
+        self, forecast_data: list[dict] | None, forecast_type: str
     ) -> list[Forecast] | None:
         """Get forecast data."""
         if forecast_data is None or len(forecast_data) < 3:
@@ -159,28 +162,36 @@ class SmhiWeather(SmhiWeatherEntity, SingleCoordinatorWeatherEntity):
         data: list[Forecast] = []
 
         for forecast in forecast_data[1:]:
-            condition = CONDITION_MAP.get(forecast["symbol"])
+            condition = CONDITION_MAP.get(forecast.get("symbol_code"))
             if condition == ATTR_CONDITION_SUNNY and not sun.is_up(
                 self.hass, forecast["valid_time"]
             ):
                 condition = ATTR_CONDITION_CLEAR_NIGHT
 
+            cloud_octas = forecast.get("cloud_area_fraction")
+            cloud_pct = (
+                round(cloud_octas * 100 / 8) if cloud_octas is not None else None
+            )
+
             new_forecast = Forecast(
                 {
                     ATTR_FORECAST_TIME: forecast["valid_time"].isoformat(),
-                    ATTR_FORECAST_NATIVE_TEMP: forecast["temperature_max"],
-                    ATTR_FORECAST_NATIVE_TEMP_LOW: forecast["temperature_min"],
+                    ATTR_FORECAST_NATIVE_TEMP: forecast.get("air_temperature"),
+                    ATTR_FORECAST_NATIVE_TEMP_LOW: forecast.get("air_temperature"),
                     ATTR_FORECAST_NATIVE_PRECIPITATION: forecast.get(
-                        "total_precipitation"
-                    )
-                    or forecast["mean_precipitation"],
+                        "precipitation_amount_mean"
+                    ),
                     ATTR_FORECAST_CONDITION: condition,
-                    ATTR_FORECAST_NATIVE_PRESSURE: forecast["pressure"],
-                    ATTR_FORECAST_WIND_BEARING: forecast["wind_direction"],
-                    ATTR_FORECAST_NATIVE_WIND_SPEED: forecast["wind_speed"],
-                    ATTR_FORECAST_HUMIDITY: forecast["humidity"],
-                    ATTR_FORECAST_NATIVE_WIND_GUST_SPEED: forecast["wind_gust"],
-                    ATTR_FORECAST_CLOUD_COVERAGE: forecast["total_cloud"],
+                    ATTR_FORECAST_NATIVE_PRESSURE: forecast.get(
+                        "air_pressure_at_mean_sea_level"
+                    ),
+                    ATTR_FORECAST_WIND_BEARING: forecast.get("wind_from_direction"),
+                    ATTR_FORECAST_NATIVE_WIND_SPEED: forecast.get("wind_speed"),
+                    ATTR_FORECAST_HUMIDITY: forecast.get("relative_humidity"),
+                    ATTR_FORECAST_NATIVE_WIND_GUST_SPEED: forecast.get(
+                        "wind_speed_of_gust"
+                    ),
+                    ATTR_FORECAST_CLOUD_COVERAGE: cloud_pct,
                 }
             )
             if forecast_type == "twice_daily":
@@ -199,7 +210,3 @@ class SmhiWeather(SmhiWeatherEntity, SingleCoordinatorWeatherEntity):
     def _async_forecast_hourly(self) -> list[Forecast] | None:
         """Service to retrieve the hourly forecast."""
         return self._get_forecast_data(self.coordinator.data.hourly, "hourly")
-
-    def _async_forecast_twice_daily(self) -> list[Forecast] | None:
-        """Service to retrieve the twice daily forecast."""
-        return self._get_forecast_data(self.coordinator.data.twice_daily, "twice_daily")
