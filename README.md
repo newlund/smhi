@@ -24,6 +24,8 @@ custom_components/
     ├── manifest.json
     ├── sensor.py
     ├── strings.json
+    ├── translations/
+    │   └── en.json
     └── weather.py
 ```
 
