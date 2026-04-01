@@ -80,6 +80,7 @@
           "high": "Hög",
           "low": "Låg",
           "moderate": "Måttlig",
+          "no_data": "Ingen data",
           "season_over": "Gräsbrandsäsongen över",
           "snow_cover": "Snötäcke",
           "very_high": "Mycket hög"
@@ -101,12 +102,18 @@
         "name": "Nederbördskategori",
         "state": {
           "0": "Ingen nederbörd",
-          "1": "Snö",
-          "2": "Snö och regn",
-          "3": "Regn",
-          "4": "Duggregn",
-          "5": "Underkylt regn",
-          "6": "Underkylt duggregn"
+          "1": "Regn",
+          "2": "Åska",
+          "3": "Underkylt regn",
+          "4": "Blandat/is",
+          "5": "Snö",
+          "6": "Blötsnö",
+          "7": "Regn och snö",
+          "8": "Ispellets",
+          "9": "Graupel",
+          "10": "Hagel",
+          "11": "Duggregn",
+          "12": "Underkylt duggregn"
         }
       },
       "precipitation_max": {

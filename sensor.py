@@ -40,6 +40,7 @@ FWI_INDEX_MAP = {
     "6": "extreme",
 }
 GRASSFIRE_MAP = {
+    "0": "no_data",
     "1": "snow_cover",
     "2": "season_over",
     "3": "low",
@@ -144,7 +145,7 @@ WEATHER_SENSOR_DESCRIPTIONS: tuple[SMHISensorDescription, ...] = (
             )
         ),
         device_class=SensorDeviceClass.ENUM,
-        options=["0", "1", "2", "3", "4", "5", "6"],
+        options=[str(i) for i in range(13)],
     ),
     SMHISensorDescription(
         key="frozen_precipitation",

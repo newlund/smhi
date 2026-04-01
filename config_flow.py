@@ -95,15 +95,15 @@ class SmhiFlowHandler(ConfigFlow, domain=DOMAIN):
                 await self.async_set_unique_id(unique_id)
                 self._abort_if_unique_id_configured()
 
-                old_lat = reconfigure_entry.data[CONF_LOCATION][CONF_LATITUDE]
-                old_lon = reconfigure_entry.data[CONF_LOCATION][CONF_LONGITUDE]
+                old_lat = round(float(reconfigure_entry.data[CONF_LOCATION][CONF_LATITUDE]), 6)
+                old_lon = round(float(reconfigure_entry.data[CONF_LOCATION][CONF_LONGITUDE]), 6)
 
                 entity_reg = er.async_get(self.hass)
                 if entity := entity_reg.async_get_entity_id(
                     WEATHER_DOMAIN, DOMAIN, f"{old_lat}, {old_lon}"
                 ):
                     entity_reg.async_update_entity(
-                        entity, new_unique_id=f"{lat}, {lon}"
+                        entity, new_unique_id=f"{round(lat, 6)}, {round(lon, 6)}"
                     )
 
                 device_reg = dr.async_get(self.hass)
@@ -111,7 +111,7 @@ class SmhiFlowHandler(ConfigFlow, domain=DOMAIN):
                     identifiers={(DOMAIN, f"{old_lat}, {old_lon}")}
                 ):
                     device_reg.async_update_device(
-                        device.id, new_identifiers={(DOMAIN, f"{lat}, {lon}")}
+                        device.id, new_identifiers={(DOMAIN, f"{round(lat, 6)}, {round(lon, 6)}")}
                     )
 
                 return self.async_update_reload_and_abort(

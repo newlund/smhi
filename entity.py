@@ -1,4 +1,4 @@
-"""Support for the Swedish weather institute weather  base entities."""
+"""Support for the Swedish weather institute weather base entities."""
 
 from __future__ import annotations
 
