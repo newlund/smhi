@@ -27,7 +27,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: SMHIConfigEntry) -> bool
     # Enable any entities that were previously disabled by default
     ent_reg = er.async_get(hass)
     for ent in er.async_entries_for_config_entry(ent_reg, entry.entry_id):
-        if ent.disabled_by == er.RegistryEntryDisabler.INTEGRATION:
+        if ent.disabled_by is not None:
             ent_reg.async_update_entity(ent.entity_id, disabled_by=None)
 
     coordinator = SMHIDataUpdateCoordinator(hass, entry)

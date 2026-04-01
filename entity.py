@@ -55,6 +55,8 @@ class SmhiEntity(
         """Initialize the SMHI entity."""
         super().__init__(coordinator)
         SmhiWeatherBaseEntity.__init__(self, latitude, longitude)
+        if coordinator.data:
+            self.update_entity_data()
 
     @callback
     def _handle_coordinator_update(self) -> None:
