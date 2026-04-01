@@ -131,15 +131,27 @@ class SMHIDataUpdateCoordinator(DataUpdateCoordinator[SMHIAllData]):
     async def _async_update_data(self) -> SMHIAllData:
         """Fetch data from SMHI.
 
-        Note: asyncio.TimeoutError and aiohttp.ClientError are already
-        handled by the DataUpdateCoordinator.
+        Weather data is required; fire data fails gracefully.
         """
         async with asyncio.timeout(TIMEOUT):
-            weather_raw, fire_daily_raw, fire_hourly_raw = await asyncio.gather(
-                _fetch_json(self._session, self._weather_url),
-                _fetch_json(self._session, self._fire_daily_url),
-                _fetch_json(self._session, self._fire_hourly_url),
-            )
+            weather_raw = await _fetch_json(self._session, self._weather_url)
+
+        # Fire data is optional — don't block weather updates if it fails
+        fire_daily: list[dict] = []
+        fire_hourly: list[dict] = []
+        try:
+            async with asyncio.timeout(TIMEOUT):
+                fire_daily_raw, fire_hourly_raw = await asyncio.gather(
+                    _fetch_json(self._session, self._fire_daily_url),
+                    _fetch_json(self._session, self._fire_hourly_url),
+                )
+            fire_daily = _parse_fire_timeseries(fire_daily_raw)
+            fire_hourly = _parse_fire_timeseries(fire_hourly_raw)
+        except Exception:  # noqa: BLE001
+            LOGGER.debug("Failed to fetch fire data, skipping")
+            if self.data:
+                fire_daily = self.data.fire.fire_daily
+                fire_hourly = self.data.fire.fire_hourly
 
         hourly = _parse_weather_timeseries(weather_raw)
         return SMHIAllData(
@@ -148,8 +160,8 @@ class SMHIDataUpdateCoordinator(DataUpdateCoordinator[SMHIAllData]):
                 hourly=hourly,
             ),
             fire=SMHIFireForecastData(
-                fire_daily=_parse_fire_timeseries(fire_daily_raw),
-                fire_hourly=_parse_fire_timeseries(fire_hourly_raw),
+                fire_daily=fire_daily,
+                fire_hourly=fire_hourly,
             ),
         )
 
@@ -161,4 +173,6 @@ class SMHIDataUpdateCoordinator(DataUpdateCoordinator[SMHIAllData]):
     @property
     def fire_current(self) -> dict:
         """Return the current fire metrics."""
-        return self.data.fire.fire_daily[0]
+        if self.data.fire.fire_daily:
+            return self.data.fire.fire_daily[0]
+        return {}
