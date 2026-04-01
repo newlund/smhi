@@ -31,6 +31,7 @@ from .entity import SmhiEntity
 PARALLEL_UPDATES = 0
 
 FWI_INDEX_MAP = {
+    "0": "no_risk",
     "1": "very_low",
     "2": "low",
     "3": "moderate",
@@ -47,6 +48,7 @@ GRASSFIRE_MAP = {
     "6": "very_high",
 }
 FORESTDRY_MAP = {
+    "0": "no_data",
     "1": "very_wet",
     "2": "wet",
     "3": "moderate_wet",

@@ -53,6 +53,7 @@
           "dry": "Torrt",
           "extremely_dry": "Extremt torrt",
           "moderate_wet": "Måttligt fuktigt",
+          "no_data": "Ingen data",
           "very_dry": "Mycket torrt",
           "very_wet": "Mycket fuktigt",
           "wet": "Fuktigt"
@@ -68,6 +69,7 @@
           "high": "Hög risk",
           "low": "Låg risk",
           "moderate": "Måttlig risk",
+          "no_risk": "Ingen risk",
           "very_high": "Mycket hög risk",
           "very_low": "Mycket låg risk"
         }

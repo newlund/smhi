@@ -53,6 +53,7 @@
           "dry": "Dry",
           "extremely_dry": "Extremely dry",
           "moderate_wet": "Moderately wet",
+          "no_data": "No data",
           "very_dry": "Very dry",
           "very_wet": "Very wet",
           "wet": "Wet"
@@ -68,6 +69,7 @@
           "high": "High risk",
           "low": "Low risk",
           "moderate": "Moderate risk",
+          "no_risk": "No risk",
           "very_high": "Very high risk",
           "very_low": "Very low risk"
         }
