@@ -32,109 +32,107 @@
       "cloud_top": {
         "name": "Molntopphöjd"
       },
-        "name": "Uppbyggnadsindex"
-      },
-      "drought_code": {
-        "name": "Torkkod"
-      },
-      "duff_moisture_code": {
-        "name": "Humusfuktkod"
-      },
-      "fine_fuel_moisture_code": {
-        "name": "Finbränslefuktkod"
-      },
-      "fire_weather_index": {
-        "name": "Brandväderindex"
-      },
-      "forestdry": {
-        "name": "Bränsletorka",
-        "state": {
-          "dry": "Torrt",
-          "extremely_dry": "Extremt torrt",
-          "moderate_wet": "Måttligt fuktigt",
-          "very_dry": "Mycket torrt",
-          "very_wet": "Mycket fuktigt",
-          "wet": "Fuktigt"
-        }
-      },
-      "frozen_precipitation": {
-        "name": "Frusen nederbörd"
-      },
-      "fwi": {
-        "name": "Brandväderindex"
-      },
-      "fwiindex": {
-        "name": "FWI-index",
-        "state": {
-          "extreme": "Extremt hög risk",
-          "high": "Hög risk",
-          "low": "Låg risk",
-          "moderate": "Måttlig risk",
-          "very_high": "Mycket hög risk",
-          "very_low": "Mycket låg risk"
-        }
-      },
-      "grassfire": {
-        "name": "Högsta gräsbrandrisk",
-        "state": {
-          "high": "Hög",
-          "low": "Låg",
-          "moderate": "Måttlig",
-          "season_over": "Gräsbrandsäsongen över",
-          "snow_cover": "Snötäcke",
-          "very_high": "Mycket hög"
-        }
-      },
-      "high_cloud": {
-        "name": "Höga moln"
-      },
-      "initial_spread_index": {
-        "name": "Initialt spridningsindex"
-      },
-      "low_cloud": {
-        "name": "Låga moln"
-      },
-      "medium_cloud": {
-        "name": "Mellanmoln"
-      },
-      "precipitation_category": {
-        "name": "Nederbördskategori",
-        "state": {
-          "0": "Ingen nederbörd",
-          "1": "Snö",
-          "2": "Snö och regn",
-          "3": "Regn",
-          "4": "Duggregn",
-          "5": "Underkylt regn",
-          "6": "Underkylt duggregn"
-        }
-      },
-      "precipitation_max": {
-        "name": "Nederbörd max"
-      },
-      "precipitation_mean": {
-        "name": "Nederbörd medel"
-      },
-      "precipitation_median": {
-        "name": "Nederbörd median"
-      },
-      "precipitation_min": {
-        "name": "Nederbörd min"
-      },
-      "probability_of_precipitation": {
-        "name": "Nederbördssannolikhet"
-      },
-      "visibility": {
-        "name": "Sikt"
-      },
-        "name": "Potentiell spridningshastighet"
-      },
-      "thunder": {
-        "name": "Åsksannolikhet"
-      },
-      "total_cloud": {
-        "name": "Total molnighet"
+      "name": "Uppbyggnadsindex"
+    },
+    "drought_code": {
+      "name": "Torkkod"
+    },
+    "duff_moisture_code": {
+      "name": "Humusfuktkod"
+    },
+    "fine_fuel_moisture_code": {
+      "name": "Finbränslefuktkod"
+    },
+    "fire_weather_index": {
+      "name": "Brandväderindex"
+    },
+    "forestdry": {
+      "name": "Bränsletorka",
+      "state": {
+        "dry": "Torrt",
+        "extremely_dry": "Extremt torrt",
+        "moderate_wet": "Måttligt fuktigt",
+        "very_dry": "Mycket torrt",
+        "very_wet": "Mycket fuktigt",
+        "wet": "Fuktigt"
       }
-    }
+    },
+    "frozen_precipitation": {
+      "name": "Frusen nederbörd"
+    },
+    "fwi": {
+      "name": "Brandväderindex"
+    },
+    "fwiindex": {
+      "name": "FWI-index",
+      "state": {
+        "extreme": "Extremt hög risk",
+        "high": "Hög risk",
+        "low": "Låg risk",
+        "moderate": "Måttlig risk",
+        "very_high": "Mycket hög risk",
+        "very_low": "Mycket låg risk"
+      }
+    },
+    "grassfire": {
+      "name": "Högsta gräsbrandrisk",
+      "state": {
+        "high": "Hög",
+        "low": "Låg",
+        "moderate": "Måttlig",
+        "season_over": "Gräsbrandsäsongen över",
+        "snow_cover": "Snötäcke",
+        "very_high": "Mycket hög"
+      }
+    },
+    "high_cloud": {
+      "name": "Höga moln"
+    },
+    "initial_spread_index": {
+      "name": "Initialt spridningsindex"
+    },
+    "low_cloud": {
+      "name": "Låga moln"
+    },
+    "medium_cloud": {
+      "name": "Mellanmoln"
+    },
+    "precipitation_category": {
+      "name": "Nederbördskategori",
+      "state": {
+        "0": "Ingen nederbörd",
+        "1": "Snö",
+        "2": "Snö och regn",
+        "3": "Regn",
+        "4": "Duggregn",
+        "5": "Underkylt regn",
+        "6": "Underkylt duggregn"
+      }
+    },
+    "precipitation_max": {
+      "name": "Nederbörd max"
+    },
+    "precipitation_mean": {
+      "name": "Nederbörd medel"
+    },
+    "precipitation_median": {
+      "name": "Nederbörd median"
+    },
+    "precipitation_min": {
+      "name": "Nederbörd min"
+    },
+    "probability_of_precipitation": {
+      "name": "Nederbördssannolikhet"
+    },
+    "visibility": {
+      "name": "Sikt"
+    },
+    "name": "Potentiell spridningshastighet"
+  },
+  "thunder": {
+    "name": "Åsksannolikhet"
+  },
+  "total_cloud": {
+    "name": "Total molnighet"
   }
 }
