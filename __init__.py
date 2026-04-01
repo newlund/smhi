@@ -8,7 +8,9 @@ from homeassistant.const import (
     Platform,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 
+from .const import DOMAIN
 from .coordinator import SMHIConfigEntry, SMHIDataUpdateCoordinator
 
 PLATFORMS = [Platform.SENSOR, Platform.WEATHER]
@@ -21,6 +23,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: SMHIConfigEntry) -> bool
         lat = round(float(entry.data[CONF_LOCATION][CONF_LATITUDE]), 6)
         lon = round(float(entry.data[CONF_LOCATION][CONF_LONGITUDE]), 6)
         hass.config_entries.async_update_entry(entry, unique_id=f"{lat}-{lon}")
+
+    # Enable any entities that were previously disabled by default
+    ent_reg = er.async_get(hass)
+    for ent in er.async_entries_for_config_entry(ent_reg, entry.entry_id):
+        if ent.disabled_by == er.RegistryEntryDisabler.INTEGRATION:
+            ent_reg.async_update_entity(ent.entity_id, disabled_by=None)
 
     coordinator = SMHIDataUpdateCoordinator(hass, entry)
     await coordinator.async_config_entry_first_refresh()

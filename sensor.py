@@ -106,7 +106,6 @@ WEATHER_SENSOR_DESCRIPTIONS: tuple[SMHISensorDescription, ...] = (
             e.coordinator.current.get("cloud_area_fraction")
         ),
         native_unit_of_measurement=PERCENTAGE,
-        entity_registry_enabled_default=True,
     ),
     SMHISensorDescription(
         key="low_cloud",
@@ -115,7 +114,6 @@ WEATHER_SENSOR_DESCRIPTIONS: tuple[SMHISensorDescription, ...] = (
             e.coordinator.current.get("low_type_cloud_area_fraction")
         ),
         native_unit_of_measurement=PERCENTAGE,
-        entity_registry_enabled_default=True,
     ),
     SMHISensorDescription(
         key="medium_cloud",
@@ -124,7 +122,6 @@ WEATHER_SENSOR_DESCRIPTIONS: tuple[SMHISensorDescription, ...] = (
             e.coordinator.current.get("medium_type_cloud_area_fraction")
         ),
         native_unit_of_measurement=PERCENTAGE,
-        entity_registry_enabled_default=True,
     ),
     SMHISensorDescription(
         key="high_cloud",
@@ -133,7 +130,6 @@ WEATHER_SENSOR_DESCRIPTIONS: tuple[SMHISensorDescription, ...] = (
             e.coordinator.current.get("high_type_cloud_area_fraction")
         ),
         native_unit_of_measurement=PERCENTAGE,
-        entity_registry_enabled_default=True,
     ),
     SMHISensorDescription(
         key="precipitation_category",
@@ -231,21 +227,18 @@ FIRE_SENSOR_DESCRIPTIONS: tuple[SMHISensorDescription, ...] = (
         value_fn=lambda e: FWI_INDEX_MAP.get(_fire_index(e, "fwiindex")),
         device_class=SensorDeviceClass.ENUM,
         options=[*FWI_INDEX_MAP.values()],
-        entity_registry_enabled_default=True,
     ),
     SMHISensorDescription(
         key="fire_weather_index",
         translation_key="fire_weather_index",
         value_fn=lambda e: e.coordinator.fire_current.get("fwi"),
         state_class=SensorStateClass.MEASUREMENT,
-        entity_registry_enabled_default=True,
     ),
     SMHISensorDescription(
         key="initial_spread_index",
         translation_key="initial_spread_index",
         value_fn=lambda e: e.coordinator.fire_current.get("isi"),
         state_class=SensorStateClass.MEASUREMENT,
-        entity_registry_enabled_default=True,
     ),
     SMHISensorDescription(
         key="build_up_index",
@@ -254,28 +247,24 @@ FIRE_SENSOR_DESCRIPTIONS: tuple[SMHISensorDescription, ...] = (
             "bui"  # codespell:ignore bui
         ),
         state_class=SensorStateClass.MEASUREMENT,
-        entity_registry_enabled_default=True,
     ),
     SMHISensorDescription(
         key="fine_fuel_moisture_code",
         translation_key="fine_fuel_moisture_code",
         value_fn=lambda e: e.coordinator.fire_current.get("ffmc"),
         state_class=SensorStateClass.MEASUREMENT,
-        entity_registry_enabled_default=True,
     ),
     SMHISensorDescription(
         key="duff_moisture_code",
         translation_key="duff_moisture_code",
         value_fn=lambda e: e.coordinator.fire_current.get("dmc"),
         state_class=SensorStateClass.MEASUREMENT,
-        entity_registry_enabled_default=True,
     ),
     SMHISensorDescription(
         key="drought_code",
         translation_key="drought_code",
         value_fn=lambda e: e.coordinator.fire_current.get("dc"),
         state_class=SensorStateClass.MEASUREMENT,
-        entity_registry_enabled_default=True,
     ),
     SMHISensorDescription(
         key="grassfire",
@@ -283,7 +272,6 @@ FIRE_SENSOR_DESCRIPTIONS: tuple[SMHISensorDescription, ...] = (
         value_fn=lambda e: GRASSFIRE_MAP.get(_fire_index(e, "grassfire")),
         device_class=SensorDeviceClass.ENUM,
         options=[*GRASSFIRE_MAP.values()],
-        entity_registry_enabled_default=True,
     ),
     SMHISensorDescription(
         key="rate_of_spread",
@@ -292,7 +280,6 @@ FIRE_SENSOR_DESCRIPTIONS: tuple[SMHISensorDescription, ...] = (
         device_class=SensorDeviceClass.SPEED,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfSpeed.METERS_PER_MINUTE,
-        entity_registry_enabled_default=True,
     ),
     SMHISensorDescription(
         key="forestdry",
@@ -300,7 +287,6 @@ FIRE_SENSOR_DESCRIPTIONS: tuple[SMHISensorDescription, ...] = (
         value_fn=lambda e: FORESTDRY_MAP.get(_fire_index(e, "forestdry")),
         device_class=SensorDeviceClass.ENUM,
         options=[*FORESTDRY_MAP.values()],
-        entity_registry_enabled_default=True,
     ),
 )
 
